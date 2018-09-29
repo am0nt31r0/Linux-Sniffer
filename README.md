@@ -4,7 +4,7 @@ Script to be continued...
 
 # Description
 
-The python script creates a raw socket and sniffs the incoming packets. The Ethernet, IP, ICMP, TCP and UDP header are displayed in the terminal plus the payload packet.
+The python script creates a raw socket and sniffs the incoming packets. The Ethernet, IP, ICMP, TCP and UDP headers are displayed in the terminal plus the payload packet.
 
 # Tested on
 KDE Neon
