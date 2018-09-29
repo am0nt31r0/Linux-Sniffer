@@ -1,0 +1,105 @@
+#!/usr/bin/python3
+
+import socket
+from struct import *
+import sys
+import binascii
+from auxiliar import *
+
+# Ethernet Header -> 14 bytes
+# IP Header -> 20 bytes
+# TCP Header -> 14 bytes
+# UDP Header -> 8 bytes
+# ICMP Header -> 4 bytes
+
+try:
+    sniffer = socket.socket(
+        socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x0800))
+
+except socket.error as e:
+    print("Error happend while creating the raw socket. Error code: " +
+          str(e[0]) + ", Error message: " + e[1])
+    sys.exit(1)
+
+while True:
+    packet = sniffer.recvfrom(65565)[0]  # informação recebida em bytes
+
+    # FRAMES Ethernet
+
+    ethernet_header = packet[0:14]
+
+    # 6s -> 6 char (string), H -> unsigned short, integer, 2 bytes
+    (dest_mac, source_mac, ether_type) = unpack('! 6s 6s H', ethernet_header)
+
+    dest_mac = get_mac_address(dest_mac)
+    source_mac = get_mac_address(source_mac)
+    ether_type = socket.htons(ether_type)
+
+    print('[Ethernet] -> Destination:' + str(dest_mac) +
+          ' | Source:' + str(source_mac) + ' | Type:' + str(ether_type))
+
+    # PACOTES IP
+
+    ip_header = packet[14:34]
+
+    # Estrutura IP
+    version_ihl = ip_header[0]
+    version = version_ihl >> 4
+    iph_length = (version_ihl & 15) * 4
+
+    (ttl, protocol, s_addr, d_addr) = unpack('! 8x B B 2x 4s 4s', ip_header)
+
+    s_addr = socket.inet_ntoa(s_addr)
+    d_addr = socket.inet_ntoa(d_addr)
+
+    print('[IP] -> Version:' + str(version) + ' | Header Length:' + str(iph_length) + ' | TTL:' + str(ttl) +
+          ' | Protocol:' + str(protocol) + ' | Source:' + str(s_addr) + ' | Destination:' + str(d_addr))
+
+    # protocol = iph[6]  # ICMP (1), TCP (6), and UDP (17)
+
+    if protocol == 6: # TCP
+
+        tcp_header = packet[34:48]
+
+        # H -> 2 bytes (integer), L -> 4 bytes (integer)
+        (source_port, dest_port, sequence, acknowledgment, offset_reserved_flags) = unpack('! H H L L H', tcp_header)
+
+        offset = (offset_reserved_flags >> 12) * 4
+        flag_urg = (offset_reserved_flags & 32) >> 5
+        flag_ack = (offset_reserved_flags & 16) >> 4
+        flag_psh = (offset_reserved_flags & 8) >> 3
+        flag_rst = (offset_reserved_flags & 4) >> 2
+        flag_syn = (offset_reserved_flags & 2) >> 1
+        flag_fin = offset_reserved_flags & 1
+
+        print('[TCP] -> Source Port:' + str(source_port) + ' | Destination Port:' + str(dest_port) + ' | Sequence Number:' + str(sequence) + ' | Acknowledgment Number:' + str(acknowledgment) + ' | Data Offset:' +
+              str(offset_reserved_flags) + ' [TCP Flags] -> URG:' + str(flag_urg) + ' ACK:' + str(flag_ack) + ' PSH:' + str(flag_psh) + ' RST:' + str(flag_rst) + ' SYN:' + str(flag_syn) + ' FIN:' + str(flag_fin))
+
+        # Data begins at headers_size byte
+        headers_size = iph_length + offset * 4
+        data_size = len(packet) - headers_size
+        data = packet[headers_size:]
+
+        print('Data size:' + str(data_size) + '\nData: ' + str(data))
+
+    elif protocol == 1: # ICMP
+
+        icmp_header = packet[34:38]
+
+        # B -> 1 bytes (integer), H -> 2 bytes (integer)
+        (icmp_type, code, checksum) = unpack('! B B H', icmp_header)
+
+        print('[ICMP] -> Type:' + str(icmp_type) + ' | Code:' + str(code) + ' | Checksum:' + str(checksum))
+
+        data = packet[38:]
+        print('ICMP Data: ' + str(data))
+
+    elif protocol == 17: # UDP
+
+        udp_header = packet[34:42]
+
+        (source_port, dest_port, length, checksum) = unpack('! H H H H', udp_header)
+        print('[UDP] -> Source Port:' + str(source_port) + ' | Destination Port:' + str(dest_port) + ' | Length:' + str(length) + ' | Checksum:' + str(checksum))
+
+    
+    print('\n')
