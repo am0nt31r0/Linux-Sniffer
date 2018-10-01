@@ -3,7 +3,6 @@
 import socket
 from struct import *
 import sys
-import binascii
 from auxiliar import *
 
 # Ethernet Header -> 14 bytes
@@ -12,8 +11,13 @@ from auxiliar import *
 # UDP Header -> 8 bytes
 # ICMP Header -> 4 bytes
 
+def get_mac_address(mac):
+    string = map('{:02x}'.format, mac)
+    mac_address = ':'.join(string).upper()
+    return mac_address
+
 try:
-    sniffer = socket.socket(
+    raw_socket = socket.socket(
         socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x0800))
 
 except socket.error as e:
@@ -22,30 +26,30 @@ except socket.error as e:
     sys.exit(1)
 
 while True:
-    packet = sniffer.recvfrom(65565)[0]  # informação recebida em bytes
+    packet = raw_socket.recvfrom(65565)[0]  # informação recebida em bytes
 
     # FRAMES Ethernet
 
     ethernet_header = packet[0:14]
 
     # 6s -> 6 char (string), H -> unsigned short, integer, 2 bytes
-    (dest_mac, source_mac, ether_type) = unpack('! 6s 6s H', ethernet_header)
+    (destination_MAC, source_MAC, ethernet_type) = unpack('! 6s 6s H', ethernet_header)
 
-    dest_mac = get_mac_address(dest_mac)
-    source_mac = get_mac_address(source_mac)
-    ether_type = socket.htons(ether_type)
+    destination_MAC = get_mac_address(destination_MAC)
+    source_MAC = get_mac_address(source_MAC)
+    ethernet_type = socket.htons(ethernet_type)
 
-    print('[Ethernet] -> Destination:' + str(dest_mac) +
-          ' | Source:' + str(source_mac) + ' | Type:' + str(ether_type))
+    print('[Ethernet] -> Destination:' + str(destination_MAC) +
+          ' | Source:' + str(source_MAC) + ' | Type:' + str(ethernet_type))
 
     # PACOTES IP
 
     ip_header = packet[14:34]
 
     # Estrutura IP
-    version_ihl = ip_header[0]
-    version = version_ihl >> 4
-    iph_length = (version_ihl & 15) * 4
+    version_iheader_length = ip_header[0]
+    version = version_iheader_length >> 4
+    iph_length = (version_iheader_length & 15) * 4
 
     (ttl, protocol, s_addr, d_addr) = unpack('! 8x B B 2x 4s 4s', ip_header)
 
@@ -55,7 +59,7 @@ while True:
     print('[IP] -> Version:' + str(version) + ' | Header Length:' + str(iph_length) + ' | TTL:' + str(ttl) +
           ' | Protocol:' + str(protocol) + ' | Source:' + str(s_addr) + ' | Destination:' + str(d_addr))
 
-    # protocol = iph[6]  # ICMP (1), TCP (6), and UDP (17)
+    # ICMP (1), TCP (6), and UDP (17)
 
     if protocol == 6: # TCP
 
@@ -80,7 +84,7 @@ while True:
         data_size = len(packet) - headers_size
         data = packet[headers_size:]
 
-        print('Data size:' + str(data_size) + '\nData: ' + str(data))
+        print('TCP Data: ' + str(data))
 
     elif protocol == 1: # ICMP
 
@@ -100,6 +104,13 @@ while True:
 
         (source_port, dest_port, length, checksum) = unpack('! H H H H', udp_header)
         print('[UDP] -> Source Port:' + str(source_port) + ' | Destination Port:' + str(dest_port) + ' | Length:' + str(length) + ' | Checksum:' + str(checksum))
+
+        data = packet[42:]
+        print('UDP Data: ' + str(data))
+
+    else:
+    	print('[IP Header] -> protocol:' + str(protocol))
+    	print('IP Data:' + str(packet[34:]))
 
     
     print('\n')
