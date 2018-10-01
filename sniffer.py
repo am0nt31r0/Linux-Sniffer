@@ -49,15 +49,15 @@ while True:
     # Estrutura IP
     version_iheader_length = ip_header[0]
     version = version_iheader_length >> 4
-    iph_length = (version_iheader_length & 15) * 4
+    ip_header_length = (version_iheader_length & 15) * 4
 
-    (ttl, protocol, s_addr, d_addr) = unpack('! 8x B B 2x 4s 4s', ip_header)
+    (ttl, protocol, source_address, destination_address) = unpack('! 8x B B 2x 4s 4s', ip_header)
 
-    s_addr = socket.inet_ntoa(s_addr)
-    d_addr = socket.inet_ntoa(d_addr)
+    source_address = socket.inet_ntoa(source_address)
+    destination_address = socket.inet_ntoa(destination_address)
 
-    print('[IP] -> Version:' + str(version) + ' | Header Length:' + str(iph_length) + ' | TTL:' + str(ttl) +
-          ' | Protocol:' + str(protocol) + ' | Source:' + str(s_addr) + ' | Destination:' + str(d_addr))
+    print('[IP] -> Version:' + str(version) + ' | Header Length:' + str(ip_header_length) + ' | TTL:' + str(ttl) +
+          ' | Protocol:' + str(protocol) + ' | Source:' + str(source_address) + ' | Destination:' + str(destination_address))
 
     # ICMP (1), TCP (6), and UDP (17)
 
@@ -80,11 +80,11 @@ while True:
               str(offset_reserved_flags) + ' [TCP Flags] -> URG:' + str(flag_urg) + ' ACK:' + str(flag_ack) + ' PSH:' + str(flag_psh) + ' RST:' + str(flag_rst) + ' SYN:' + str(flag_syn) + ' FIN:' + str(flag_fin))
 
         # Data begins at headers_size byte
-        headers_size = iph_length + offset * 4
-        data_size = len(packet) - headers_size
-        data = packet[headers_size:]
+        #headers_size = ip_header_length + offset * 4
+        #data_size = len(packet) - headers_size
+        #data = packet[headers_size:]
 
-        print('TCP Data: ' + str(data))
+        print('TCP Data: ' + str(packet[:48]))
 
     elif protocol == 1: # ICMP
 
@@ -109,7 +109,7 @@ while True:
         print('UDP Data: ' + str(data))
 
     else:
-    	print('[IP Header] -> protocol:' + str(protocol))
+    	print('[IP Header] -> protocol: ' + str(protocol))
     	print('IP Data:' + str(packet[34:]))
 
     
