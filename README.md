@@ -1,6 +1,4 @@
-# Python-Sniffer
-
-Script to be continued...
+# Linux-Sniffer
 
 # Description
 
