@@ -11,7 +11,7 @@ from auxiliar import *
 # UDP Header -> 8 bytes
 # ICMP Header -> 4 bytes
 
-def get_mac_address(mac):
+def format_MAC(mac):
     string = map('{:02x}'.format, mac)
     mac_address = ':'.join(string).upper()
     return mac_address
@@ -35,8 +35,8 @@ while True:
     # 6s -> 6 char (string), H -> unsigned short, integer, 2 bytes
     (destination_MAC, source_MAC, ethernet_type) = unpack('! 6s 6s H', ethernet_header)
 
-    destination_MAC = get_mac_address(destination_MAC)
-    source_MAC = get_mac_address(source_MAC)
+    destination_MAC = format_MAC(destination_MAC)
+    source_MAC = format_MAC(source_MAC)
     ethernet_type = socket.htons(ethernet_type)
 
     print('[Ethernet] -> Destination:' + str(destination_MAC) +
